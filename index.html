@@ -1,166 +1,615 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tetris</title>
-  <style>
-    body { background:#111; color:#eee; font-family: system-ui, -apple-system, BlinkMacSystemFont; display:flex; justify-content:center; align-items:center; height:100vh; }
-    #wrap { display:flex; gap:16px; }
-    canvas { background:#000; box-shadow: 0 0 0 2px #333; }
-    .panel { font-size:14px; line-height:1.6; }
-    .panel h2 { margin:0 0 8px; font-size:16px; }
-    .panel .score { font-size:18px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バナナ排出ゲーム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        .instructions {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .game-area {
+            position: relative;
+            height: 400px;
+            background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .w-shape {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 120px;
+            font-weight: bold;
+            color: #d4a574;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+            z-index: 1;
+            font-family: 'Comic Sans MS', cursive;
+            letter-spacing: -10px;
+        }
+        
+        .banana {
+            position: absolute;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            background: linear-gradient(135deg, #ffe135 0%, #ffa500 100%);
+            border-radius: 20px;
+            transition: height 0.15s ease-out;
+            z-index: 2;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            border: 2px solid #ff8c00;
+            transform-origin: top center;
+        }
+        
+        .banana::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 12px;
+            background: #8b4513;
+            border-radius: 5px;
+        }
+        
+        .banana.wiggle {
+            animation: wiggle 0.3s ease-in-out;
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-50%) rotate(2deg); }
+            75% { transform: translateX(-50%) rotate(-2deg); }
+        }
+        
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ffd700;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float-up 1s ease-out forwards;
+        }
+        
+        @keyframes float-up {
+            to {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .pressure-bar-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .pressure-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .pressure-bar {
+            width: 100%;
+            height: 30px;
+            background: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .pressure-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50 0%, #FFC107 50%, #F44336 100%);
+            transition: width 0.1s;
+            border-radius: 15px;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+        }
+        
+        .push-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            flex: 1;
+        }
+        
+        .push-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245,87,108,0.4);
+        }
+        
+        .push-btn:active {
+            transform: translateY(0);
+        }
+        
+        .reset-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79,172,254,0.4);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .stat {
+            text-align: center;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #777;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .combo-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,215,0,0.9);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            display: none;
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        
+        .difficulty-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            background: white;
+            color: #666;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .difficulty-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .difficulty-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
 </head>
 <body>
-  <div id="wrap">
-    <canvas id="game" width="240" height="400"></canvas>
-    <div class="panel">
-      <h2>操作</h2>
-      ← → : 移動<br />
-      ↑ : 回転<br />
-      ↓ : ソフトドロップ<br />
-      Space : ハードドロップ
-      <h2>スコア</h2>
-      <div class="score" id="score">0</div>
+    <div class="game-container">
+        <h1>🍌 バナナ排出ゲーム 🍌</h1>
+        
+        <div class="instructions">
+            <strong>遊び方:</strong> 括約筋の力をコントロールして、できるだけ長いバナナを下に出そう！
+            力を入れすぎると切れてしまい、弱すぎると出てこない。最適ゾーン(緑色)をキープしてコンボを稼げ！
+        </div>
+        
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" data-difficulty="easy">初心者</button>
+            <button class="difficulty-btn" data-difficulty="normal">普通</button>
+            <button class="difficulty-btn" data-difficulty="hard">上級者</button>
+        </div>
+        
+        <div class="game-area">
+            <div class="combo-indicator" id="comboIndicator">COMBO x<span id="comboCount">0</span></div>
+            <div class="w-shape">W</div>
+            <div class="banana" id="banana" style="height: 0px;"></div>
+        </div>
+        
+        <div class="controls">
+            <div class="pressure-bar-container">
+                <div class="pressure-label">
+                    <span>括約筋の力</span>
+                    <span id="pressureValue">0%</span>
+                </div>
+                <div class="pressure-bar">
+                    <div class="pressure-fill" id="pressureFill" style="width: 0%;"></div>
+                </div>
+            </div>
+            
+            <div class="buttons">
+                <button class="push-btn" id="pushBtn">いきむ！</button>
+                <button class="reset-btn" id="resetBtn">リセット</button>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">現在の長さ</div>
+                <div class="stat-value" id="currentLength">0cm</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">最高記録</div>
+                <div class="stat-value" id="bestLength">0cm</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">コンボ</div>
+                <div class="stat-value" id="comboDisplay">×0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">スコア</div>
+                <div class="stat-value" id="scoreDisplay">0</div>
+            </div>
+        </div>
+        
+        <div class="message" id="message"></div>
     </div>
-  </div>
 
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-
-const COLS = 10;
-const ROWS = 20;
-const BLOCK = 20;
-
-const COLORS = {
-  I: '#00f0f0',
-  O: '#f0f000',
-  T: '#a000f0',
-  S: '#00f000',
-  Z: '#f00000',
-  J: '#0000f0',
-  L: '#f0a000'
-};
-
-const SHAPES = {
-  I: [[1,1,1,1]],
-  O: [[1,1],[1,1]],
-  T: [[0,1,0],[1,1,1]],
-  S: [[0,1,1],[1,1,0]],
-  Z: [[1,1,0],[0,1,1]],
-  J: [[1,0,0],[1,1,1]],
-  L: [[0,0,1],[1,1,1]]
-};
-
-let board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-let current, score = 0;
-
-function newPiece() {
-  const keys = Object.keys(SHAPES);
-  const type = keys[Math.floor(Math.random() * keys.length)];
-  return {
-    type,
-    shape: SHAPES[type],
-    x: Math.floor((COLS - SHAPES[type][0].length) / 2),
-    y: 0
-  };
-}
-
-function drawBlock(x, y, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
-  ctx.strokeStyle = '#111';
-  ctx.strokeRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
-}
-
-function draw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  board.forEach((row, y) => row.forEach((cell, x) => {
-    if (cell) drawBlock(x, y, cell);
-  }));
-  current.shape.forEach((row, y) => row.forEach((cell, x) => {
-    if (cell) drawBlock(current.x + x, current.y + y, COLORS[current.type]);
-  }));
-}
-
-function collide(px, py, shape) {
-  for (let y=0; y<shape.length; y++) {
-    for (let x=0; x<shape[y].length; x++) {
-      if (shape[y][x]) {
-        const nx = px + x;
-        const ny = py + y;
-        if (nx < 0 || nx >= COLS || ny >= ROWS || (ny >= 0 && board[ny][nx])) return true;
-      }
-    }
-  }
-  return false;
-}
-
-function merge() {
-  current.shape.forEach((row, y) => row.forEach((cell, x) => {
-    if (cell) board[current.y + y][current.x + x] = COLORS[current.type];
-  }));
-}
-
-function rotate(shape) {
-  return shape[0].map((_, i) => shape.map(row => row[i]).reverse());
-}
-
-function clearLines() {
-  let lines = 0;
-  board = board.filter(row => {
-    if (row.every(cell => cell)) { lines++; return false; }
-    return true;
-  });
-  while (board.length < ROWS) board.unshift(Array(COLS).fill(0));
-  if (lines) {
-    score += [0, 100, 300, 500, 800][lines];
-    scoreEl.textContent = score;
-  }
-}
-
-function drop() {
-  if (!collide(current.x, current.y + 1, current.shape)) {
-    current.y++;
-  } else {
-    merge();
-    clearLines();
-    current = newPiece();
-    if (collide(current.x, current.y, current.shape)) {
-      alert('GAME OVER');
-      board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
-      score = 0; scoreEl.textContent = score;
-    }
-  }
-}
-
-let last = 0;
-function loop(time=0) {
-  if (time - last > 600) { drop(); last = time; }
-  draw();
-  requestAnimationFrame(loop);
-}
-
-current = newPiece();
-loop();
-
-window.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft' && !collide(current.x-1, current.y, current.shape)) current.x--;
-  if (e.key === 'ArrowRight' && !collide(current.x+1, current.y, current.shape)) current.x++;
-  if (e.key === 'ArrowDown') drop();
-  if (e.key === 'ArrowUp') {
-    const r = rotate(current.shape);
-    if (!collide(current.x, current.y, r)) current.shape = r;
-  }
-  if (e.code === 'Space') {
-    while (!collide(current.x, current.y+1, current.shape)) current.y++;
-    drop();
-  }
-});
-</script>
+    <script>
+        let pressure = 0;
+        let bananaLength = 0;
+        let bestLength = 0;
+        let score = 0;
+        let combo = 0;
+        let isGameOver = false;
+        let isPushing = false;
+        let difficulty = 'easy';
+        
+        const banana = document.getElementById('banana');
+        const pressureFill = document.getElementById('pressureFill');
+        const pressureValue = document.getElementById('pressureValue');
+        const currentLengthDisplay = document.getElementById('currentLength');
+        const bestLengthDisplay = document.getElementById('bestLength');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const comboIndicator = document.getElementById('comboIndicator');
+        const comboCount = document.getElementById('comboCount');
+        const message = document.getElementById('message');
+        const pushBtn = document.getElementById('pushBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const gameArea = document.querySelector('.game-area');
+        
+        const difficulties = {
+            easy: {
+                optimalMin: 35,
+                optimalMax: 75,
+                pressureIncrement: 3,
+                pressureDecay: 1.5,
+                growthRate: 1.2,
+                breakThreshold: 95
+            },
+            normal: {
+                optimalMin: 40,
+                optimalMax: 70,
+                pressureIncrement: 5,
+                pressureDecay: 2,
+                growthRate: 1,
+                breakThreshold: 90
+            },
+            hard: {
+                optimalMin: 45,
+                optimalMax: 65,
+                pressureIncrement: 7,
+                pressureDecay: 2.5,
+                growthRate: 0.8,
+                breakThreshold: 85
+            }
+        };
+        
+        let currentDifficulty = difficulties[difficulty];
+        
+        // 難易度選択
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!isPushing && bananaLength === 0) {
+                    document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    difficulty = btn.dataset.difficulty;
+                    currentDifficulty = difficulties[difficulty];
+                    showMessage('難易度: ' + btn.textContent + ' に設定しました', 'success');
+                }
+            });
+        });
+        
+        function updatePressure() {
+            if (isPushing) {
+                pressure = Math.min(pressure + currentDifficulty.pressureIncrement + Math.random() * 2, 100);
+            } else {
+                pressure = Math.max(pressure - currentDifficulty.pressureDecay, 0);
+            }
+            
+            pressureFill.style.width = pressure + '%';
+            pressureValue.textContent = Math.round(pressure) + '%';
+            
+            // 圧力範囲による処理
+            if (pressure < currentDifficulty.optimalMin && pressure > 5) {
+                showMessage('💨 力が弱い...もっといきんで！', 'warning');
+                resetCombo();
+            } else if (pressure >= currentDifficulty.optimalMin && pressure <= currentDifficulty.optimalMax) {
+                showMessage('✨ 完璧な力加減！KEEP IT!', 'success');
+                growBanana();
+                increaseCombo();
+            } else if (pressure > currentDifficulty.optimalMax && pressure < currentDifficulty.breakThreshold) {
+                showMessage('⚠️ 危険！力を緩めて！', 'danger');
+                resetCombo();
+                // 圧力が高いとバナナが震える
+                banana.classList.add('wiggle');
+                setTimeout(() => banana.classList.remove('wiggle'), 300);
+            }
+            
+            if (pressure >= currentDifficulty.breakThreshold) {
+                gameOver('💥 力を入れすぎてバナナが切れた！');
+            }
+        }
+        
+        function growBanana() {
+            if (isGameOver) return;
+            
+            const baseGrowth = 4 + Math.random() * 3;
+            const comboBonus = combo * 0.3;
+            const growth = (baseGrowth + comboBonus) * currentDifficulty.growthRate;
+            
+            bananaLength += growth;
+            banana.style.height = bananaLength + 'px';
+            
+            const lengthCm = Math.round(bananaLength / 10);
+            currentLengthDisplay.textContent = lengthCm + 'cm';
+            
+            // スコア加算
+            const points = Math.round(growth * (1 + combo * 0.5));
+            score += points;
+            scoreDisplay.textContent = score;
+            
+            // パーティクル効果
+            if (combo > 3) {
+                createParticle();
+            }
+            
+            if (lengthCm > bestLength) {
+                bestLength = lengthCm;
+                bestLengthDisplay.textContent = bestLength + 'cm';
+            }
+        }
+        
+        function increaseCombo() {
+            combo++;
+            comboDisplay.textContent = '×' + combo;
+            comboCount.textContent = combo;
+            
+            if (combo >= 3) {
+                comboIndicator.style.display = 'block';
+            }
+            
+            if (combo === 10) {
+                showMessage('🔥 すごい！コンボ10達成！', 'success');
+            } else if (combo === 20) {
+                showMessage('🌟 神業！コンボ20達成！', 'success');
+            }
+        }
+        
+        function resetCombo() {
+            if (combo > 0) {
+                combo = 0;
+                comboDisplay.textContent = '×0';
+                comboIndicator.style.display = 'none';
+            }
+        }
+        
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = (50 + (Math.random() - 0.5) * 40) + '%';
+            particle.style.top = (140 + bananaLength + Math.random() * 20) + 'px';
+            gameArea.appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1000);
+        }
+        
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = 'message ' + type;
+        }
+        
+        function gameOver(msg) {
+            isGameOver = true;
+            isPushing = false;
+            showMessage(msg, 'danger');
+            pushBtn.textContent = 'ゲーム終了';
+            pushBtn.disabled = true;
+            
+            setTimeout(() => {
+                const lengthCm = Math.round(bananaLength / 10);
+                let resultMsg = '';
+                
+                if (lengthCm >= 30) {
+                    resultMsg = '🏆 伝説級！長さ: ' + lengthCm + 'cm / スコア: ' + score;
+                } else if (lengthCm >= 20) {
+                    resultMsg = '🎉 素晴らしい！長さ: ' + lengthCm + 'cm / スコア: ' + score;
+                } else if (lengthCm >= 10) {
+                    resultMsg = '👍 良い感じ！長さ: ' + lengthCm + 'cm / スコア: ' + score;
+                } else {
+                    resultMsg = '💪 もっと練習だ！長さ: ' + lengthCm + 'cm / スコア: ' + score;
+                }
+                
+                showMessage(resultMsg, 'success');
+            }, 1500);
+        }
+        
+        function reset() {
+            pressure = 0;
+            bananaLength = 0;
+            score = 0;
+            combo = 0;
+            isGameOver = false;
+            isPushing = false;
+            
+            banana.style.height = '0px';
+            pressureFill.style.width = '0%';
+            pressureValue.textContent = '0%';
+            currentLengthDisplay.textContent = '0cm';
+            comboDisplay.textContent = '×0';
+            scoreDisplay.textContent = '0';
+            comboIndicator.style.display = 'none';
+            message.textContent = '';
+            message.className = 'message';
+            
+            pushBtn.textContent = 'いきむ！';
+            pushBtn.disabled = false;
+        }
+        
+        // ゲームループ
+        let gameLoop = setInterval(() => {
+            if (!isGameOver) {
+                updatePressure();
+            }
+        }, 100);
+        
+        // プッシュボタンイベント
+        pushBtn.addEventListener('mousedown', () => {
+            if (isGameOver) return;
+            isPushing = true;
+        });
+        
+        pushBtn.addEventListener('mouseup', () => {
+            isPushing = false;
+        });
+        
+        pushBtn.addEventListener('mouseleave', () => {
+            isPushing = false;
+        });
+        
+        pushBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isGameOver) return;
+            isPushing = true;
+        });
+        
+        pushBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isPushing = false;
+        });
+        
+        resetBtn.addEventListener('click', reset);
+        
+        showMessage('準備完了！難易度を選んで「いきむ！」を長押ししてスタート', 'success');
+    </script>
 </body>
 </html>
