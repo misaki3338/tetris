@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris</title>
+  <style>
+    body { background:#111; color:#eee; font-family: system-ui, -apple-system, BlinkMacSystemFont; display:flex; justify-content:center; align-items:center; height:100vh; }
+    #wrap { display:flex; gap:16px; }
+    canvas { background:#000; box-shadow: 0 0 0 2px #333; }
+    .panel { font-size:14px; line-height:1.6; }
+    .panel h2 { margin:0 0 8px; font-size:16px; }
+    .panel .score { font-size:18px; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="240" height="400"></canvas>
+    <div class="panel">
+      <h2>操作</h2>
+      ← → : 移動<br />
+      ↑ : 回転<br />
+      ↓ : ソフトドロップ<br />
+      Space : ハードドロップ
+      <h2>スコア</h2>
+      <div class="score" id="score">0</div>
+    </div>
+  </div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+const COLS = 10;
+const ROWS = 20;
+const BLOCK = 20;
+
+const COLORS = {
+  I: '#00f0f0',
+  O: '#f0f000',
+  T: '#a000f0',
+  S: '#00f000',
+  Z: '#f00000',
+  J: '#0000f0',
+  L: '#f0a000'
+};
+
+const SHAPES = {
+  I: [[1,1,1,1]],
+  O: [[1,1],[1,1]],
+  T: [[0,1,0],[1,1,1]],
+  S: [[0,1,1],[1,1,0]],
+  Z: [[1,1,0],[0,1,1]],
+  J: [[1,0,0],[1,1,1]],
+  L: [[0,0,1],[1,1,1]]
+};
+
+let board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+let current, score = 0;
+
+function newPiece() {
+  const keys = Object.keys(SHAPES);
+  const type = keys[Math.floor(Math.random() * keys.length)];
+  return {
+    type,
+    shape: SHAPES[type],
+    x: Math.floor((COLS - SHAPES[type][0].length) / 2),
+    y: 0
+  };
+}
+
+function drawBlock(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+  ctx.strokeStyle = '#111';
+  ctx.strokeRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  board.forEach((row, y) => row.forEach((cell, x) => {
+    if (cell) drawBlock(x, y, cell);
+  }));
+  current.shape.forEach((row, y) => row.forEach((cell, x) => {
+    if (cell) drawBlock(current.x + x, current.y + y, COLORS[current.type]);
+  }));
+}
+
+function collide(px, py, shape) {
+  for (let y=0; y<shape.length; y++) {
+    for (let x=0; x<shape[y].length; x++) {
+      if (shape[y][x]) {
+        const nx = px + x;
+        const ny = py + y;
+        if (nx < 0 || nx >= COLS || ny >= ROWS || (ny >= 0 && board[ny][nx])) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function merge() {
+  current.shape.forEach((row, y) => row.forEach((cell, x) => {
+    if (cell) board[current.y + y][current.x + x] = COLORS[current.type];
+  }));
+}
+
+function rotate(shape) {
+  return shape[0].map((_, i) => shape.map(row => row[i]).reverse());
+}
+
+function clearLines() {
+  let lines = 0;
+  board = board.filter(row => {
+    if (row.every(cell => cell)) { lines++; return false; }
+    return true;
+  });
+  while (board.length < ROWS) board.unshift(Array(COLS).fill(0));
+  if (lines) {
+    score += [0, 100, 300, 500, 800][lines];
+    scoreEl.textContent = score;
+  }
+}
+
+function drop() {
+  if (!collide(current.x, current.y + 1, current.shape)) {
+    current.y++;
+  } else {
+    merge();
+    clearLines();
+    current = newPiece();
+    if (collide(current.x, current.y, current.shape)) {
+      alert('GAME OVER');
+      board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+      score = 0; scoreEl.textContent = score;
+    }
+  }
+}
+
+let last = 0;
+function loop(time=0) {
+  if (time - last > 600) { drop(); last = time; }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+current = newPiece();
+loop();
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' && !collide(current.x-1, current.y, current.shape)) current.x--;
+  if (e.key === 'ArrowRight' && !collide(current.x+1, current.y, current.shape)) current.x++;
+  if (e.key === 'ArrowDown') drop();
+  if (e.key === 'ArrowUp') {
+    const r = rotate(current.shape);
+    if (!collide(current.x, current.y, r)) current.shape = r;
+  }
+  if (e.code === 'Space') {
+    while (!collide(current.x, current.y+1, current.shape)) current.y++;
+    drop();
+  }
+});
+</script>
+</body>
+</html>
